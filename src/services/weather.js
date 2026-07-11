@@ -1,11 +1,11 @@
 /**
- * MonsoonGuard — Weather API Service
- * 
+ * Weather AI — Weather API Service
+ *
  * Resolution order:
- * 1. Vercel serverless proxy (/api/weather) — keys on server, user sees nothing
- * 2. User-entered key from Settings (localStorage) — for manual testing
- * 3. Cached weather data from last successful fetch
- * 4. Offline placeholder
+ *   1. Vercel serverless proxy (/api/weather) — keys stored server-side, user sees nothing
+ *   2. User-entered key from Settings (localStorage) — for personal/demo use
+ *   3. Cached weather data from the last successful API fetch
+ *   4. Offline placeholder — shows "Unavailable" state, never returns fake data
  */
 
 import { getItem, setItem, StorageKeys } from './storage.js';

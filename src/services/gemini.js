@@ -1,10 +1,10 @@
 /**
- * MonsoonGuard — Gemini API Service
- * 
+ * Weather AI — Gemini API Service
+ *
  * Resolution order:
- * 1. Vercel serverless proxy (/api/gemini) — keys on server, user sees nothing
- * 2. User-entered key from Settings (localStorage) — for manual testing
- * 3. Offline knowledge base fallback — always works
+ *   1. Vercel serverless proxy (/api/gemini) — keys stored server-side, user sees nothing
+ *   2. User-entered key from Settings (localStorage) — for personal/demo use
+ *   3. Offline knowledge base — always works, zero network dependency
  */
 
 import { getItem, StorageKeys, cacheAIResponse, getCachedAIResponse, hashString } from './storage.js';

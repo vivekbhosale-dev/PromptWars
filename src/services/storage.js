@@ -1,10 +1,10 @@
 /**
- * MonsoonGuard — Storage Service
+ * Weather AI — Storage Service
  * Secure localStorage wrapper with namespacing and type safety.
- * All keys are prefixed to avoid collisions.
+ * All keys are prefixed to avoid collisions with other browser storage.
  */
 
-const STORAGE_PREFIX = 'monsoonguard_';
+const STORAGE_PREFIX = 'weatherai_';
 
 /**
  * Storage keys enum — centralizes all storage keys for maintainability

@@ -1,6 +1,7 @@
 /**
- * MonsoonGuard — Main Application
+ * Weather AI — Main Application
  * Entry point: initializes theme, router, service worker, and renders all pages.
+ * Architecture: Hash-based SPA with lazy-loaded page modules and graceful offline fallback.
  */
 
 import { getTheme, setTheme, getItem, setItem, StorageKeys, clearAll } from './services/storage.js';
@@ -19,24 +20,38 @@ function initApp() {
   updateNetworkStatus();
 }
 
+/**
+ * Registers the Service Worker for PWA offline support.
+ * Silently skips if the browser does not support Service Workers.
+ */
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/sw.js')
-        .then((reg) => console.log('[SW] Registered, scope:', reg.scope))
-        .catch((err) => console.warn('[SW] Registration failed:', err));
-    });
-  }
+  if (!('serviceWorker' in navigator)) return;
+
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => console.log('[SW] Registered, scope:', reg.scope))
+      .catch((err) => console.warn('[SW] Registration failed:', err));
+  });
 }
 
 // ─── Network Status ─────────────────────────────────────────────────
 
+/**
+ * Updates all network status indicator elements in the UI.
+ * Shows a warning toast when the user goes offline.
+ */
 function updateNetworkStatus() {
   const isOnline = navigator.onLine;
+  const statusClass = isOnline ? 'online-badge' : 'offline-badge';
+  const dotClass = isOnline ? 'online' : 'offline';
+  const label = isOnline ? 'Online' : 'Offline Mode';
+
   document.querySelectorAll('.network-status-indicator').forEach((el) => {
-    el.className = `network-status-indicator ${isOnline ? 'online-badge' : 'offline-badge'}`;
-    el.innerHTML = `<div class="status-dot ${isOnline ? 'online' : 'offline'}"></div>${isOnline ? 'Online' : 'Offline Mode'}`;
+    el.className = `network-status-indicator ${statusClass}`;
+    el.innerHTML = `<div class="status-dot ${dotClass}"></div>${label}`;
   });
+
   if (!isOnline) {
     showToast('You are offline. The app will use cached data and the built-in knowledge base.', 'warning');
   }
@@ -44,42 +59,74 @@ function updateNetworkStatus() {
 
 // ─── Toast Notifications ────────────────────────────────────────────
 
+/**
+ * Displays a dismissible toast notification at the top-right of the screen.
+ * Auto-dismisses after 5 seconds.
+ * @param {string} message - The notification message (XSS-safe).
+ * @param {'info' | 'success' | 'warning' | 'danger'} [type='info'] - Visual variant.
+ */
 export function showToast(message, type = 'info') {
   const container = document.getElementById('toast-container');
   if (!container) return;
 
+  const DISMISS_DELAY_MS = 200;
+  const AUTO_DISMISS_MS = 5000;
+
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
-  toast.innerHTML = `<div class="toast-message">${escapeHtml(message)}</div><button class="toast-close" aria-label="Dismiss">✕</button>`;
-  toast.querySelector('.toast-close').addEventListener('click', () => {
+  toast.innerHTML = `
+    <div class="toast-message">${escapeHtml(message)}</div>
+    <button class="toast-close" aria-label="Dismiss notification">✕</button>
+  `;
+
+  const dismiss = () => {
     toast.style.opacity = '0';
-    setTimeout(() => toast.remove(), 200);
-  });
+    setTimeout(() => toast.remove(), DISMISS_DELAY_MS);
+  };
+
+  toast.querySelector('.toast-close').addEventListener('click', dismiss);
   container.appendChild(toast);
-  setTimeout(() => { if (toast.parentElement) { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); } }, 5000);
+  setTimeout(() => { if (toast.parentElement) dismiss(); }, AUTO_DISMISS_MS);
 }
 
-/** Prevent XSS in user-generated content */
+/**
+ * Sanitizes a string to prevent XSS attacks by encoding HTML entities.
+ * Uses the browser's built-in DOM parser for reliable escaping.
+ * @param {string} str - Raw input string.
+ * @returns {string} HTML-safe string.
+ */
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
 }
 
-/** Convert basic markdown to HTML (for AI responses) */
+/**
+ * Converts a subset of Markdown syntax to safe HTML for rendering AI responses.
+ * Escapes HTML entities first to prevent XSS, then applies formatting rules.
+ * @param {string} text - Raw Markdown string from the AI.
+ * @returns {string} Sanitized HTML string.
+ */
 function markdownToHtml(text) {
   return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // 1. Escape HTML entities first to prevent XSS
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // 2. Headings
     .replace(/^### (.+)$/gm, '<h3>$1</h3>')
     .replace(/^## (.+)$/gm, '<h2>$1</h2>')
     .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // 3. Inline formatting
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // 4. Lists
     .replace(/^- (.+)$/gm, '<li>$1</li>')
     .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
     .replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`)
+    // 5. Blockquotes and line breaks
     .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\n{2,}/g, '</p><p>')
     .replace(/\n/g, '<br/>')
     .replace(/^(.+)$/, '<p>$1</p>');
@@ -151,24 +198,38 @@ const routes = {
   '#settings': renderSettings,
 };
 
+/**
+ * Sets up the client-side hash router.
+ * Navigates between pages by reading window.location.hash and calling the
+ * matching render function. Shows a loading spinner during async renders.
+ */
 function setupRouter() {
   const handleRoute = async () => {
     const hash = window.location.hash;
-    const route = routes[hash] || routes[''];
+    const route = routes[hash] ?? routes[''];
     const container = document.getElementById('page-container');
 
     updateActiveNav(hash);
+
+    // Show spinner while the page loads
     container.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+
+    // Restart CSS entry animation via reflow trick
     container.style.animation = 'none';
-    // Trigger reflow for animation restart
-    void container.offsetHeight;
+    void container.offsetHeight; // eslint-disable-line no-void
     container.style.animation = '';
 
     try {
       await route(container);
     } catch (error) {
-      console.error('Route render error:', error);
-      container.innerHTML = `<div class="empty-state"><h3>Something went wrong</h3><p>${escapeHtml(error.message)}</p><a href="#dashboard" class="btn btn-primary" style="margin-top:1rem;">Go to Dashboard</a></div>`;
+      console.error('[Router] Render error on route', hash, ':', error);
+      container.innerHTML = [
+        '<div class="empty-state">',
+        '  <h3>Something went wrong</h3>',
+        `  <p>${escapeHtml(error.message)}</p>`,
+        '  <a href="#dashboard" class="btn btn-primary" style="margin-top:1rem;">Go to Dashboard</a>',
+        '</div>',
+      ].join('');
     }
   };
 
@@ -180,15 +241,23 @@ function setupRouter() {
 // PAGE: Dashboard
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Renders the Dashboard page with live weather, risk assessment, forecast,
+ * emergency contacts, and safety recommendations.
+ * Falls back gracefully if geolocation or weather APIs are unavailable.
+ * @param {HTMLElement} container - The page container element.
+ */
 async function renderDashboard(container) {
   const { getCurrentWeather, getForecast, getCurrentPosition, assessMonsoonRisk, getWeatherEmoji } = await import('./services/weather.js');
   const { emergencyContacts, safetyRecommendations } = await import('./services/offline-knowledge.js');
 
+  // Default to Mumbai (financial capital, high monsoon risk city) if GPS unavailable
+  const MUMBAI_COORDS = { lat: 19.0760, lon: 72.8777 };
   let coords;
   try {
     coords = await getCurrentPosition();
   } catch {
-    coords = { lat: 19.0760, lon: 72.8777 }; // Default Mumbai
+    coords = MUMBAI_COORDS;
   }
 
   let weather, forecast, risk;
@@ -293,6 +362,12 @@ async function renderDashboard(container) {
 // PAGE: AI Assistant
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Renders the AI Assistant page with a live chat interface powered by Gemini.
+ * Falls back to the offline knowledge base when Gemini is not configured.
+ * Supports multi-turn conversation history and quick-prompt shortcuts.
+ * @param {HTMLElement} container - The page container element.
+ */
 async function renderAssistant(container) {
   const { generateResponse, isGeminiConfigured } = await import('./services/gemini.js');
 
@@ -403,6 +478,12 @@ async function renderAssistant(container) {
 // PAGE: Checklists
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Renders the Emergency Checklists page.
+ * Shows a grid of NDMA-aligned checklist categories with progress tracking.
+ * All progress is persisted to localStorage for continuity across sessions.
+ * @param {HTMLElement} container - The page container element.
+ */
 async function renderChecklists(container) {
   const { emergencyChecklists } = await import('./services/offline-knowledge.js');
   const progress = getItem(StorageKeys.CHECKLIST_PROGRESS, {});
@@ -497,6 +578,11 @@ async function renderChecklists(container) {
 // PAGE: Settings
 // ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Renders the Settings page for API key configuration, theme, and data management.
+ * Keys are stored in localStorage and are never sent to any third-party service.
+ * @param {HTMLElement} container - The page container element.
+ */
 async function renderSettings(container) {
   const { validateGeminiKey } = await import('./services/gemini.js');
   const { validateWeatherKey } = await import('./services/weather.js');
