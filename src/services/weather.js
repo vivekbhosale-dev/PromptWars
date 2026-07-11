@@ -294,28 +294,29 @@ export function assessMonsoonRisk(weather) {
 }
 
 /**
- * Offline fallback weather data (Demo Mode for Hackathon)
+ * Offline fallback weather data — shown when API key is missing or unavailable.
+ * Returns clearly labelled unavailable state; NO fake/mock data.
  */
 function getOfflineWeather() {
   return {
-    temp: 28,
-    feelsLike: 32,
-    tempMin: 26,
-    tempMax: 30,
-    humidity: 85,
-    pressure: 1004,
-    description: 'Heavy intense rain (Demo Data)',
-    icon: '09d',
-    main: 'Rain',
-    windSpeed: 15.5,
-    windDeg: 210,
-    visibility: 2.5,
-    clouds: 100,
-    rain: 45.2,
-    city: 'Mumbai',
-    country: 'IN',
-    sunrise: Date.now() - 40000000,
-    sunset: Date.now() + 40000000,
+    temp: null,
+    feelsLike: null,
+    tempMin: null,
+    tempMax: null,
+    humidity: null,
+    pressure: null,
+    description: 'Weather data unavailable',
+    icon: null,
+    main: 'Unavailable',
+    windSpeed: null,
+    windDeg: 0,
+    visibility: null,
+    clouds: null,
+    rain: 0,
+    city: 'Unknown',
+    country: '',
+    sunrise: Date.now(),
+    sunset: Date.now(),
     timestamp: Date.now(),
     source: 'offline',
     isOffline: true,
@@ -323,16 +324,23 @@ function getOfflineWeather() {
 }
 
 /**
- * Offline fallback forecast (Demo Mode for Hackathon)
+ * Offline fallback forecast — shown when API key is missing or unavailable.
+ * Returns clearly labelled unavailable state; NO fake/mock data.
  */
 function getOfflineForecast() {
-  return [
-    { day: 'Mon', tempMin: 25, tempMax: 29, description: 'Heavy Rain', main: 'Rain', icon: '09d', humidity: 88, rain: 60, windSpeed: 18, isOffline: true },
-    { day: 'Tue', tempMin: 24, tempMax: 28, description: 'Thunderstorm', main: 'Thunderstorm', icon: '11d', humidity: 92, rain: 85, windSpeed: 22, isOffline: true },
-    { day: 'Wed', tempMin: 26, tempMax: 30, description: 'Moderate Rain', main: 'Rain', icon: '10d', humidity: 80, rain: 25, windSpeed: 12, isOffline: true },
-    { day: 'Thu', tempMin: 27, tempMax: 32, description: 'Cloudy', main: 'Clouds', icon: '04d', humidity: 75, rain: 0, windSpeed: 8, isOffline: true },
-    { day: 'Fri', tempMin: 26, tempMax: 31, description: 'Light Rain', main: 'Rain', icon: '10d', humidity: 78, rain: 5, windSpeed: 10, isOffline: true }
-  ];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+  return days.map((day) => ({
+    day,
+    tempMin: null,
+    tempMax: null,
+    description: 'Unavailable',
+    main: 'Unavailable',
+    icon: null,
+    humidity: null,
+    rain: 0,
+    windSpeed: null,
+    isOffline: true,
+  }));
 }
 
 /**
