@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1b2a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1b2d4a;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4aa;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00b4d8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="100" fill="url(#bg)"/>
+  <path d="M256 70 L396 135 L396 268 C396 353 338 418 256 450 C174 418 116 353 116 268 L116 135 Z" 
+        fill="url(#shield)" opacity="0.9"/>
+  <line x1="208" y1="190" x2="198" y2="232" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.9"/>
+  <line x1="256" y1="176" x2="246" y2="228" stroke="white" stroke-width="9" stroke-linecap="round" opacity="0.95"/>
+  <line x1="304" y1="190" x2="294" y2="232" stroke="white" stroke-width="8" stroke-linecap="round" opacity="0.9"/>
+  <ellipse cx="256" cy="288" rx="74" ry="37" fill="white" opacity="0.95"/>
+  <ellipse cx="220" cy="272" rx="42" ry="32" fill="white" opacity="0.95"/>
+  <ellipse cx="292" cy="272" rx="42" ry="32" fill="white" opacity="0.95"/>
+  <ellipse cx="256" cy="256" rx="48" ry="37" fill="white" opacity="0.95"/>
+  <path d="M224 340 L250 370 L300 314" stroke="#0d1b2a" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
